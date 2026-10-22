@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
+
+@font-face {
+  font-family: 'North Point';
+  src: url('../fonts/northpoint.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-brand: 'North Point', sans-serif;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --bg-body: #000000;
+  --text-main: #ffffff;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+
+  --border-main: rgba(255, 255, 255, 0.28);
+  --border-hover: #ffffff;
+  --btn-bg: transparent;
+  --btn-bg-hover: rgba(255, 255, 255, 0.08);
+
+  --toast-bg: #ffffff;
+  --toast-text: #000000;
+
+  --transition-fast: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--bg-body);
+}
+
+body {
+  color: var(--text-main);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+  position: relative;
+}
+
+.canvas-frame {
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.profile-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2.25rem;
+  width: 100%;
+}
+
+.identity-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.avatar-frame {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 0.5px solid var(--border-main);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: none;
+}
+
+.avatar-img[src]:not([src=""]) {
+  display: block;
+}
+
+.brand-title {
+  font-family: var(--font-brand);
+  font-size: 3.1rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--text-main);
+  line-height: 1;
+  user-select: none;
+}
+
+.bio-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-body);
+}
+
+.bio-line {
+  font-size: 1.22rem;
+  line-height: 1.6;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.bio-line.muted {
+  color: var(--text-muted);
+}
+
+.bio-line.italic {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+}
+
+.links-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.95rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.65rem;
+  border: 1.5px solid var(--border-main);
+  border-radius: 12px;
+  background-color: var(--btn-bg);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.link-btn:hover {
+  border-color: var(--border-hover);
+  background-color: var(--btn-bg-hover);
+  transform: translateY(-2px);
+}
+
+.link-btn:active {
+  transform: translateY(0);
+}
+
+.toast-notice {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--toast-bg);
+  color: var(--toast-text);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 200;
+}
+
+.toast-notice.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

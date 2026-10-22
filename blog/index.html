@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kinija's blog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/blog.css">
+</head>
+
+<body>
+  <div class="blog-wrap">
+    <nav class="blog-nav">
+      <a href="../index.html" class="nav-brand">kinija</a>
+      <a href="../index.html" class="nav-back" id="nav-action" aria-label="Back">&lt;---</a>
+    </nav>
+
+    <main id="blog-content"></main>
+  </div>
+
+  <script>
+    (function () {
+      function resolvePostUrl(slug) {
+        let base = window.location.pathname;
+        if (!base.endsWith('/')) base = base.substring(0, base.lastIndexOf('/') + 1);
+        if (!base.endsWith('/blog/')) {
+          if (base.endsWith('/blog')) base += '/';
+          else base += 'blog/';
+        }
+        return base + 'posts/' + slug + '.md';
+      }
+
+      function parseMarkdown(raw) {
+        let text = raw.replace(/\r\n/g, '\n');
+        let fm = {};
+
+        const match = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+        if (match) {
+          match[1].split('\n').forEach(line => {
+            const idx = line.indexOf(':');
+            if (idx !== -1) fm[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+          });
+          text = match[2];
+        }
+
+        function inlines(str) {
+          return str
+            .replace(/`([^`]+)`/g, '<code class="code-inline">$1</code>')
+            .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            .replace(/_([^_]+)_/g, '<em>$1</em>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+        }
+
+        text = text.replace(/:::quote\s*(?:\[([^\]]+)\])?\n([\s\S]*?)\n:::/g, (_, author, body) => {
+          const cite = author ? `<cite>— ${author}</cite>` : '';
+          return `<blockquote class="editorial-quote"><p>${inlines(body.trim())}</p>${cite}</blockquote>`;
+        });
+
+        text = text.replace(/:::note\n([\s\S]*?)\n:::/g, (_, body) => {
+          return `<div class="callout-note">${inlines(body.trim())}</div>`;
+        });
+
+        text = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+          const safe = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<div class="code-wrap"><pre class="code-content"><code>${safe}</code></pre></div>`;
+        });
+
+        const lines = text.split('\n');
+        let blocks = [];
+        let listOpen = false;
+        let listTag = '';
+        let pAcc = [];
+
+        function flushP() {
+          if (pAcc.length) {
+            blocks.push(`<p>${inlines(pAcc.join(' '))}</p>`);
+            pAcc = [];
+          }
+        }
+
+        function flushList() {
+          if (listOpen) {
+            blocks.push(`</${listTag}>`);
+            listOpen = false;
+          }
+        }
+
+        lines.forEach(line => {
+          const t = line.trim();
+          if (line.startsWith('<blockquote') || line.startsWith('<div class="callout') || line.startsWith('<div class="code-wrap')) {
+            flushP(); flushList(); blocks.push(line); return;
+          }
+          if (t === '---' || t === '***') {
+            flushP(); flushList(); blocks.push('<hr class="rule">'); return;
+          }
+          if (t.startsWith('# ')) {
+            flushP(); flushList(); return;
+          }
+          if (t.startsWith('## ')) {
+            flushP(); flushList(); blocks.push(`<h2>${inlines(t.slice(3))}</h2>`); return;
+          }
+          if (t.startsWith('### ')) {
+            flushP(); flushList(); blocks.push(`<h3>${inlines(t.slice(4))}</h3>`); return;
+          }
+          if (t.startsWith('- ') || t.startsWith('* ')) {
+            flushP();
+            if (!listOpen || listTag !== 'ul') {
+              flushList(); blocks.push('<ul>'); listOpen = true; listTag = 'ul';
+            }
+            blocks.push(`<li>${inlines(t.slice(2))}</li>`); return;
+          }
+          if (!t) {
+            flushP(); flushList(); return;
+          }
+          pAcc.push(t);
+        });
+
+        flushP();
+        flushList();
+        return { fm, html: blocks.join('\n') };
+      }
+
+      async function getPostsIndex() {
+        try {
+          const dirUrl = resolvePostUrl('').replace(/posts\/\.md$/, 'posts/');
+          const res = await fetch(dirUrl);
+          if (res.ok) {
+            const html = await res.text();
+            const matches = [];
+            const regex = /(?:title="([^"]+\.md)"|href="[^"]*?([^"/]+\.md)(?:\.preview)?")/g;
+            let m;
+            while ((m = regex.exec(html)) !== null) {
+              const file = (m[1] || m[2]).replace('.md', '');
+              if (!matches.includes(file)) matches.push(file);
+            }
+            if (matches.length) {
+              const list = await Promise.all(matches.map(async slug => {
+                try {
+                  const postRes = await fetch(resolvePostUrl(slug));
+                  const text = await postRes.text();
+                  const { fm } = parseMarkdown(text);
+                  return {
+                    slug,
+                    title: fm.title || slug.replace(/-/g, ' '),
+                    date: fm.date || ''
+                  };
+                } catch (_) {
+                  return { slug, title: slug, date: '' };
+                }
+              }));
+              return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            }
+          }
+        } catch (_) { }
+
+        return [];
+      }
+
+      const content = document.getElementById('blog-content');
+      const navAction = document.getElementById('nav-action');
+
+      async function renderIndex() {
+        navAction.textContent = '<---';
+        navAction.href = '../index.html';
+        navAction.onclick = null;
+
+        content.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.85rem;">loading...</div>`;
+        const posts = await getPostsIndex();
+        const rows = posts.map(p => `
+          <a href="#${p.slug}" class="archive-row">
+            <span class="post-row-title">${p.title}</span>
+            <span class="post-row-date">${p.date}</span>
+          </a>
+        `).join('');
+
+        content.innerHTML = `<div class="archive-wrap">${rows}</div>`;
+      }
+
+      async function renderPost(slug) {
+        navAction.textContent = '<---';
+        navAction.href = '#';
+        navAction.onclick = (e) => {
+          e.preventDefault();
+          window.location.hash = '';
+        };
+
+        try {
+          const url = resolvePostUrl(slug);
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('File not found');
+          const raw = await res.text();
+          const parsed = parseMarkdown(raw);
+          const title = parsed.fm.title || slug;
+          const date = parsed.fm.date || '';
+          const read = parsed.fm.read || '';
+          const desc = parsed.fm.description ? `<p class="article-desc">${parsed.fm.description}</p>` : '';
+
+          content.innerHTML = `
+            <article>
+              <header class="article-header">
+                <div class="article-meta">${date}${read ? ' · ' + read : ''}</div>
+                <h1 class="article-title">${title}</h1>
+                ${desc}
+              </header>
+              <div class="article-body">
+                ${parsed.html}
+              </div>
+            </article>
+          `;
+        } catch (err) {
+          renderIndex();
+        }
+      }
+
+      function route() {
+        const slug = window.location.hash.replace('#', '');
+        if (slug) renderPost(slug);
+        else renderIndex();
+      }
+
+      window.addEventListener('hashchange', route);
+      route();
+    })();
+  </script>
+</body>
+
+</html>
