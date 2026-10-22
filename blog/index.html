@@ -23,14 +23,18 @@
 
   <script>
     (function () {
-      function resolvePostUrl(slug) {
+      function resolveBasePath() {
         let base = window.location.pathname;
         if (!base.endsWith('/')) base = base.substring(0, base.lastIndexOf('/') + 1);
         if (!base.endsWith('/blog/')) {
           if (base.endsWith('/blog')) base += '/';
           else base += 'blog/';
         }
-        return base + 'posts/' + slug + '.md';
+        return base;
+      }
+
+      function resolvePostUrl(slug) {
+        return resolveBasePath() + 'posts/' + slug + '.md';
       }
 
       function parseMarkdown(raw) {
@@ -127,33 +131,42 @@
 
       async function getPostsIndex() {
         try {
-          const dirUrl = resolvePostUrl('').replace(/posts\/\.md$/, 'posts/');
-          const res = await fetch(dirUrl);
+          const indexUrl = resolveBasePath() + 'posts/index.json';
+          const res = await fetch(indexUrl);
           if (res.ok) {
-            const html = await res.text();
-            const matches = [];
-            const regex = /(?:title="([^"]+\.md)"|href="[^"]*?([^"/]+\.md)(?:\.preview)?")/g;
-            let m;
-            while ((m = regex.exec(html)) !== null) {
-              const file = (m[1] || m[2]).replace('.md', '');
-              if (!matches.includes(file)) matches.push(file);
-            }
-            if (matches.length) {
-              const list = await Promise.all(matches.map(async slug => {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+              const list = await Promise.all(data.map(async item => {
+                const slug = typeof item === 'string' ? item : item.slug;
+                if (!slug) return null;
+
+                if (typeof item === 'object' && item.title && item.date) {
+                  return {
+                    slug,
+                    title: item.title,
+                    date: item.date
+                  };
+                }
+
                 try {
                   const postRes = await fetch(resolvePostUrl(slug));
                   const text = await postRes.text();
                   const { fm } = parseMarkdown(text);
                   return {
                     slug,
-                    title: fm.title || slug.replace(/-/g, ' '),
-                    date: fm.date || ''
+                    title: (typeof item === 'object' && item.title) || fm.title || slug.replace(/-/g, ' '),
+                    date: (typeof item === 'object' && item.date) || fm.date || ''
                   };
                 } catch (_) {
-                  return { slug, title: slug, date: '' };
+                  return {
+                    slug,
+                    title: (typeof item === 'object' && item.title) || slug.replace(/-/g, ' '),
+                    date: (typeof item === 'object' && item.date) || ''
+                  };
                 }
               }));
-              return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+              return list.filter(Boolean).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             }
           }
         } catch (_) { }
@@ -171,6 +184,11 @@
 
         content.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.85rem;">loading...</div>`;
         const posts = await getPostsIndex();
+        if (!posts.length) {
+          content.innerHTML = `<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.85rem;">no posts yet.</div>`;
+          return;
+        }
+
         const rows = posts.map(p => `
           <a href="#${p.slug}" class="archive-row">
             <span class="post-row-title">${p.title}</span>
