@@ -164,6 +164,10 @@ body {
   color: #d8d8d8;
 }
 
+.article-body > :first-child {
+  margin-top: 0;
+}
+
 .article-body h1 {
   font-family: var(--font-brand);
   font-size: clamp(2rem, 4vw, 2.6rem);
@@ -173,18 +177,20 @@ body {
 }
 
 .article-body h2 {
-  font-size: 1.4rem;
+  font-family: var(--font-brand);
+  font-size: 1.65rem;
   font-weight: 500;
   letter-spacing: -0.015em;
   color: #ffffff;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
 }
 
 .article-body h3 {
-  font-size: 1.15rem;
-  font-weight: 500;
-  color: #ffffff;
-  margin-top: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+  margin-bottom: -0.8rem;
 }
 
 .article-body p {
